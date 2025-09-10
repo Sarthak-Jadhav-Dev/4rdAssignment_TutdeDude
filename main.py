@@ -1,42 +1,32 @@
-from flask import Flask, jsonify, render_template, request, redirect, url_for
+from flask import Flask, request, render_template, jsonify
 from pymongo import MongoClient
-import json
 
 app = Flask(__name__)
 
-# MongoDB Atlas connection (replace with your connection string)
-client = MongoClient("mongodb+srv://sarthakjadhav4848:vbEp6MZz1byJlmls@cluster0.v7ho4.mongodb.net/?retryWrites=true&w=majority")
-db = client["testdb"]
-collection = db["formdata"]
+# Connect to MongoDB (make sure MongoDB is running on your system)
+client = MongoClient("mongodb://localhost:27017/")
+db = client["todo_db"]        # Database name
+collection = db["todo_items"] # Collection name
 
-# API route: return JSON data from file
-@app.route("/api")
-def get_data():
-    with open("data.json", "r") as f:
-        data = json.load(f)
-    return jsonify(data)
+@app.route("/")
+def home():
+    # Render the To-Do form
+    return render_template("todo.html")
 
-# Frontend form route
-@app.route("/", methods=["GET", "POST"])
-def index():
-    if request.method == "POST":
-        try:
-            name = request.form["name"]
-            email = request.form["email"]
+@app.route("/submittodoitem", methods=["POST"])
+def submittodoitem():
+    # Get data from form (POST request)
+    item_name = request.form.get("itemName")
+    item_description = request.form.get("itemDescription")
 
-            # Insert into MongoDB
-            collection.insert_one({"name": name, "email": email})
+    # Store in MongoDB
+    todo_item = {
+        "itemName": item_name,
+        "itemDescription": item_description
+    }
+    collection.insert_one(todo_item)
 
-            return redirect(url_for("success"))
-        except Exception as e:
-            return render_template("form.html", error=str(e))
-
-    return render_template("form.html")
-
-# Success page
-@app.route("/success")
-def success():
-    return "Data submitted successfully"
+    return jsonify({"message": "To-Do item saved successfully!", "data": todo_item})
 
 if __name__ == "__main__":
     app.run(debug=True)
